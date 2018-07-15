@@ -18,8 +18,13 @@ from TM1637 import FourDigit
 config = SafeConfigParser()
 config.read("/home/pi/RaspiDigiHamClock/raspiclock.ini")
 
+# Debug mode 0/1
+DEBUG = config.getint('CLOCK', 'debug')
+
+if DEBUG: print "Initializing..."
+
 # Number of TM1637 modules
-NUM_MODS = config.getint('CLOCK', 'Num_modules')
+NUM_MODS = config.getint('CLOCK', 'num_modules')
 
 # Timezones
 tmz = []
@@ -33,7 +38,7 @@ with open('/etc/timezone') as f:
     TZ = f.readline().strip()
 for x in range(0,NUM_MODS):
     # Get System 'Local' time zone
-    if tmz[x] == 'Local':
+    if tmz[x].lower() == 'local':
 	tmz[x] = TZ
 
 # 12/24 Hour
@@ -43,20 +48,37 @@ mil.append(config.get('CLOCK', 'HR2'))
 mil.append(config.get('CLOCK', 'HR3'))
 mil.append(config.get('CLOCK', 'HR4'))
 
+# Brightness
+l = config.getint('CLOCK', 'LUM')
+
 # Initialize 4 modules, even if not all are avail
 # This uses the GPIO BOARD PINS (1 thru 40)
+d = []
+d.append(config.getint('CLOCK', 'DIO1'))
+d.append(config.getint('CLOCK', 'DIO2'))
+d.append(config.getint('CLOCK', 'DIO3'))
+d.append(config.getint('CLOCK', 'DIO4'))
+
+c = []
+c.append(config.getint('CLOCK', 'CLK1'))
+c.append(config.getint('CLOCK', 'CLK2'))
+c.append(config.getint('CLOCK', 'CLK3'))
+c.append(config.getint('CLOCK', 'CLK4'))
+
 disp = []
-disp.append(FourDigit(dio=38,clk=40,lum=1))
-disp.append(FourDigit(dio=35,clk=37,lum=1))
-disp.append(FourDigit(dio=32,clk=36,lum=1))
-disp.append(FourDigit(dio=31,clk=33,lum=1))
+for x in range(0,NUM_MODS):
+    disp.append(FourDigit(dio=d[x],clk=c[x],lum=l))
 
 showColon = True
 
+if DEBUG: print "Number of modules = "+str(NUM_MODS)
+
+if DEBUG: print "Starting clock loop..."
 
 
 # DISPLAY TIME ON ONE MODULE
 def displayTM(disp,tim,hrs,colon):
+    if DEBUG: print "displayTM()"
     hour = tim.tm_hour
     minute = tim.tm_min
     if hrs == '12':
@@ -68,7 +90,8 @@ def displayTM(disp,tim,hrs,colon):
 # MAIN LOOP
 while True:
     for x in range(0,NUM_MODS):
-	# Get Current Time for time zone
+	if DEBUG: print "Module#"+str(x+1)
+	# Get Current Time for desired timezone
 	cur=time.time()
 	os.environ["TZ"]=tmz[x]
 	time.tzset()

@@ -1,4 +1,4 @@
-# Display5a.py
+#
 # Test a TM1637 4 digit iDisplay Module
 # usage:
 # Wire TM1637 
@@ -9,8 +9,7 @@
 #
 # $ python test.py
 #
-# Edit FourDigit() to change pins
-#
+# If needed, edit FourDigit() to change pins
 #
 
 
@@ -26,5 +25,7 @@ d.setColon(True)
 d.show("ABCD")
 sleep(3)
 d.setColon(False)
-d.setLuminosity(7) # range 0..7
+d.setLuminosity(4) # range 0..7
 d.show("donE")
+sleep(3)
+d.erase()
