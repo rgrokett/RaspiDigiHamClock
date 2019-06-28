@@ -10,7 +10,7 @@
 
 import os
 import time
-from ConfigParser import SafeConfigParser
+from configparser import SafeConfigParser
 from TM1637 import FourDigit
         
 
@@ -21,7 +21,8 @@ config.read("/home/pi/RaspiDigiHamClock/raspiclock.ini")
 # Debug mode 0/1
 DEBUG = config.getint('CLOCK', 'debug')
 
-if DEBUG: print "Initializing..."
+if DEBUG: 
+    print("Initializing...")
 
 # Number of TM1637 modules
 NUM_MODS = config.getint('CLOCK', 'num_modules')
@@ -39,7 +40,7 @@ with open('/etc/timezone') as f:
 for x in range(0,NUM_MODS):
     # Get System 'Local' time zone
     if tmz[x].lower() == 'local':
-	tmz[x] = TZ
+        tmz[x] = TZ
 
 # 12/24 Hour
 mil = []
@@ -71,14 +72,17 @@ for x in range(0,NUM_MODS):
 
 showColon = True
 
-if DEBUG: print "Number of modules = "+str(NUM_MODS)
+if DEBUG: 
+    print("Number of modules = "+str(NUM_MODS))
 
-if DEBUG: print "Starting clock loop..."
+if DEBUG: 
+    print("Starting clock loop...")
 
 
 # DISPLAY TIME ON ONE MODULE
 def displayTM(disp,tim,hrs,colon):
-    if DEBUG: print "displayTM()"
+    if DEBUG: 
+        print("displayTM()")
     hour = tim.tm_hour
     minute = tim.tm_min
     if hrs == '12':
@@ -90,13 +94,14 @@ def displayTM(disp,tim,hrs,colon):
 # MAIN LOOP
 while True:
     for x in range(0,NUM_MODS):
-	if DEBUG: print "Module#"+str(x+1)
-	# Get Current Time for desired timezone
-	cur=time.time()
-	os.environ["TZ"]=tmz[x]
-	time.tzset()
-	ct = time.localtime(cur)
-    	displayTM(disp[x],ct,mil[x],showColon)
+      if DEBUG: 
+        print("Module#"+str(x+1))
+      # Get Current Time for desired timezone
+      cur=time.time()
+      os.environ["TZ"]=tmz[x]
+      time.tzset()
+      ct = time.localtime(cur)
+      displayTM(disp[x],ct,mil[x],showColon)
 
     time.sleep(0.5)
     showColon = not showColon
