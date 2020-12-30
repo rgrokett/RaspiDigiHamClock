@@ -1,4 +1,5 @@
 # RaspiDigiHamClock
+
 Raspberry Pi powered Digital Clock for Amateur Radio using TM1637 4 digit displays
 
 Amateur Radio Operators (aka HAM Radio) use 24 hour UTC (Universal Coordinated Time) for much of their operation.  I decided to build a digital clock using the low-cost TM1637 4 digit displays and a Raspberry Pi Zero W instead of just a GUI clock. (Hardware is fun!)
