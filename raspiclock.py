@@ -2,6 +2,8 @@
 # RaspiDigiClock using TM1637 modules
 # Designed to run up to 4 modules
 #
+# Requires Python2.7
+#
 # Use the raspidigiclock.ini file to set number of 
 # modules, Timezone, 12/24 hr clock
 #
@@ -10,7 +12,7 @@
 
 import os
 import time
-from configparser import SafeConfigParser
+from ConfigParser import SafeConfigParser
 from TM1637 import FourDigit
         
 
