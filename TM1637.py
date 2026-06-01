@@ -25,7 +25,7 @@ class FourDigit:
         k = 33
         while k < 127:
             ch = chr(k)
-            if TM1637.PATTERN[ch] != 0:
+            if PATTERN[ord(ch) - 32] != 0:
                 s = s + ch
             k += 1
         return  s
@@ -72,7 +72,7 @@ class FourDigit:
         GPIO.setwarnings(False)
         self.clk = clk
         self.dio = dio
-        self.lum = lum
+        self.setLuminosity(lum)
         self.colon = False
         self.startPos = 0
         self.text = None
@@ -155,6 +155,8 @@ class FourDigit:
         Sets the brightness of the display.
         @param luminosity the brightness (0..9, 0: invisible)
         '''
+        if lum < 0 or lum > 7:
+            raise ValueError("luminosity must be between 0 and 7")
         self.lum = lum
 
     def setColon(self, enable):        
@@ -195,11 +197,16 @@ class FourDigit:
             sleep(0.0001)
 
         GPIO.output(self.clk, 0)
-        GPIO.output(self.dio, 1)
+        GPIO.setup(self.dio, GPIO.IN)
         GPIO.output(self.clk, 1)
-        # wait for ACK, no need to set pin as input
-        while GPIO.input(self.dio) == 1:
+        # Wait for ACK from the display, but do not let a bad module hang the clock.
+        ack_waits = 0
+        while GPIO.input(self.dio) == 1 and ack_waits < 100:
             sleep(0.001)
+            ack_waits += 1
+        GPIO.setup(self.dio, GPIO.OUT)
+        if ack_waits >= 100:
+            raise IOError("TM1637 display did not acknowledge on DIO pin %s" % self.dio)
         sleep(0.001)
     
     def _toSegment(self, text):
@@ -208,9 +215,9 @@ class FourDigit:
         if self.colon:
             msb = 0x80
         for c in text:
-            if ord(c) < 32 or ord(c) > 127:
+            if ord(c) < 32 or ord(c) > 126:
                 c = " "
-            data.append(ord(PATTERN[ord(c) - 32]) + msb)
+            data.append(PATTERN[ord(c) - 32] + msb)
         return data
 
     def _start(self):

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Test a TM1637 4 digit iDisplay Module
 # usage:
@@ -7,7 +8,7 @@
 #	CLK-- Pin 40
 #	DIO-- Pin 38
 #
-# $ python test.py
+# $ python3 test.py
 #
 # If needed, edit FourDigit() to change pins
 #

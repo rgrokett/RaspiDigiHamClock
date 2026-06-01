@@ -1,8 +1,8 @@
-#!/bin/python
+#!/usr/bin/env python3
 # RaspiDigiClock using TM1637 modules
 # Designed to run up to 4 modules
 #
-# Requires Python2.7
+# Requires Python 3.11+
 #
 # Use the raspidigiclock.ini file to set number of 
 # modules, Timezone, 12/24 hr clock
@@ -12,78 +12,63 @@
 
 import os
 import time
-from ConfigParser import SafeConfigParser
+from configparser import ConfigParser
 from TM1637 import FourDigit
-        
 
-# USER VARIABLES FROM .ini CONFIG FILE
-config = SafeConfigParser()
-config.read("/home/pi/RaspiDigiHamClock/raspiclock.ini")
+CONFIG_PATH = "/home/pi/RaspiDigiHamClock/raspiclock.ini"
+MAX_MODULES = 4
 
-# Debug mode 0/1
-DEBUG = config.getint('CLOCK', 'debug')
 
-if DEBUG: 
-    print("Initializing...")
+def read_config(path=CONFIG_PATH):
+    config = ConfigParser()
+    loaded = config.read(path)
+    if not loaded:
+        raise RuntimeError("Unable to read config file: %s" % path)
+    if not config.has_section('CLOCK'):
+        raise RuntimeError("Missing [CLOCK] section in %s" % path)
+    return config
 
-# Number of TM1637 modules
-NUM_MODS = config.getint('CLOCK', 'num_modules')
 
-# Timezones
-tmz = []
-tmz.append(config.get('CLOCK', 'TZ1'))
-tmz.append(config.get('CLOCK', 'TZ2'))
-tmz.append(config.get('CLOCK', 'TZ3'))
-tmz.append(config.get('CLOCK', 'TZ4'))
+def get_local_timezone():
+    with open('/etc/timezone') as f:
+        return f.readline().strip()
 
-# Convert 'Local' to current system timezone
-with open('/etc/timezone') as f:
-    TZ = f.readline().strip()
-for x in range(0,NUM_MODS):
-    # Get System 'Local' time zone
-    if tmz[x].lower() == 'local':
-        tmz[x] = TZ
 
-# 12/24 Hour
-mil = []
-mil.append(config.get('CLOCK', 'HR1'))
-mil.append(config.get('CLOCK', 'HR2'))
-mil.append(config.get('CLOCK', 'HR3'))
-mil.append(config.get('CLOCK', 'HR4'))
+def get_clock_settings(config):
+    debug = config.getint('CLOCK', 'debug')
+    num_mods = config.getint('CLOCK', 'num_modules')
+    if num_mods < 1 or num_mods > MAX_MODULES:
+        raise ValueError("num_modules must be between 1 and %d" % MAX_MODULES)
 
-# Brightness
-l = config.getint('CLOCK', 'LUM')
+    local_tz = get_local_timezone()
+    timezones = []
+    hours = []
+    dio_pins = []
+    clk_pins = []
+    for index in range(1, num_mods + 1):
+        timezone = config.get('CLOCK', 'TZ%d' % index).strip()
+        if timezone.lower() == 'local':
+            timezone = local_tz
+        timezones.append(timezone)
 
-# Initialize 4 modules, even if not all are avail
-# This uses the GPIO BOARD PINS (1 thru 40)
-d = []
-d.append(config.getint('CLOCK', 'DIO1'))
-d.append(config.getint('CLOCK', 'DIO2'))
-d.append(config.getint('CLOCK', 'DIO3'))
-d.append(config.getint('CLOCK', 'DIO4'))
+        hour_format = config.get('CLOCK', 'HR%d' % index).strip()
+        if hour_format not in ('12', '24'):
+            raise ValueError("HR%d must be either 12 or 24" % index)
+        hours.append(hour_format)
 
-c = []
-c.append(config.getint('CLOCK', 'CLK1'))
-c.append(config.getint('CLOCK', 'CLK2'))
-c.append(config.getint('CLOCK', 'CLK3'))
-c.append(config.getint('CLOCK', 'CLK4'))
+        dio_pins.append(config.getint('CLOCK', 'DIO%d' % index))
+        clk_pins.append(config.getint('CLOCK', 'CLK%d' % index))
 
-disp = []
-for x in range(0,NUM_MODS):
-    disp.append(FourDigit(dio=d[x],clk=c[x],lum=l))
+    luminosity = config.getint('CLOCK', 'LUM')
+    if luminosity < 0 or luminosity > 7:
+        raise ValueError("LUM must be between 0 and 7")
 
-showColon = True
-
-if DEBUG: 
-    print("Number of modules = "+str(NUM_MODS))
-
-if DEBUG: 
-    print("Starting clock loop...")
+    return debug, num_mods, timezones, hours, luminosity, dio_pins, clk_pins
 
 
 # DISPLAY TIME ON ONE MODULE
-def displayTM(disp,tim,hrs,colon):
-    if DEBUG: 
+def displayTM(disp, tim, hrs, colon, debug=False):
+    if debug:
         print("displayTM()")
     hour = tim.tm_hour
     minute = tim.tm_min
@@ -93,18 +78,41 @@ def displayTM(disp,tim,hrs,colon):
     disp.setColon(colon)
 
 
-# MAIN LOOP
-while True:
-    for x in range(0,NUM_MODS):
-      if DEBUG: 
-        print("Module#"+str(x+1))
-      # Get Current Time for desired timezone
-      cur=time.time()
-      os.environ["TZ"]=tmz[x]
-      time.tzset()
-      ct = time.localtime(cur)
-      displayTM(disp[x],ct,mil[x],showColon)
+def main():
+    config = read_config()
+    debug, num_mods, timezones, hours, luminosity, dio_pins, clk_pins = get_clock_settings(config)
 
-    time.sleep(0.5)
-    showColon = not showColon
+    if debug:
+        print("Initializing...")
 
+    # This uses the GPIO BOARD PINS (1 thru 40).
+    displays = []
+    for index in range(num_mods):
+        displays.append(FourDigit(dio=dio_pins[index], clk=clk_pins[index], lum=luminosity))
+
+    if debug:
+        print("Number of modules = " + str(num_mods))
+        print("Starting clock loop...")
+
+    show_colon = True
+
+    while True:
+        for index in range(num_mods):
+            if debug:
+                print("Module#" + str(index + 1))
+            cur = time.time()
+            os.environ["TZ"] = timezones[index]
+            time.tzset()
+            ct = time.localtime(cur)
+            try:
+                displayTM(displays[index], ct, hours[index], show_colon, debug)
+            except OSError as exc:
+                if debug:
+                    print("Module#" + str(index + 1) + " error: " + str(exc))
+
+        time.sleep(0.5)
+        show_colon = not show_colon
+
+
+if __name__ == '__main__':
+    main()

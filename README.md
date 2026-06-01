@@ -2,7 +2,7 @@
 
 Raspberry Pi powered Digital Clock for Amateur Radio using TM1637 4 digit displays
 
-NOTE: This project uses Python2.7 and is not compatible with Python3.X
+NOTE: This project uses Python 3.11 or newer.
 
 Amateur Radio Operators (aka HAM Radio) use 24 hour UTC (Universal Coordinated Time) for much of their operation.  I decided to build a digital clock using the low-cost TM1637 4 digit displays and a Raspberry Pi Zero W instead of just a GUI clock. (Hardware is fun!)
 
@@ -17,5 +17,4 @@ You can also set the TIME ZONE that you would like to use instead of default Loc
 This project does require soldering connectors or wires onto the Pi and/or the tm1637 modules. 
 
 See [RaspiDigiHamClock.pdf](RaspiDigiHamClock.pdf) for full details.
-
 
